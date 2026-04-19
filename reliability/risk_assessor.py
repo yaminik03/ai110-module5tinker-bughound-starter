@@ -79,8 +79,20 @@ def assess_risk(
 
     # ----------------------------
     # Auto-fix policy
+    # Make auto-apply slightly harder: require a "low" level AND a high enough
+    # absolute score to avoid applying fixes on borderline cases.
+    # Previously any "low" level allowed autofix; now require score >= 85 as
+    # well to reduce accidental auto-applies when only a few deductions occurred.
     # ----------------------------
-    should_autofix = level == "low"
+    should_autofix = level == "low" and score >= 85
+
+    # If we are deliberately suppressing autofix because the score is below the
+    # autofix threshold, record that as a reason so callers/logs can explain
+    # why no automatic change was applied even though the level is "low".
+    if level == "low" and score < 85:
+        reasons.append(
+            f"Autofix suppressed: score {score} below autofix threshold (85)."
+        )
 
     if not reasons:
         reasons.append("No significant risks detected.")

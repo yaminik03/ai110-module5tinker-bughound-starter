@@ -78,8 +78,14 @@ class BugHoundAgent:
 
         issues = self._parse_json_array_of_issues(raw)
 
+        # Validate the LLM output to avoid accepting low-quality or malformed issue lists.
+        # If the parsed output is None or fails basic validation, fall back to heuristics.
         if issues is None:
             self._log("ANALYZE", "LLM output was not parseable JSON. Falling back to heuristics.")
+            return self._heuristic_analyze(code_snippet)
+
+        if not self._validate_issues(issues):
+            self._log("ANALYZE", "LLM returned invalid or low-quality issues. Falling back to heuristics.")
             return self._heuristic_analyze(code_snippet)
 
         return issues
@@ -225,6 +231,36 @@ class BugHoundAgent:
         if match:
             return match.group(1)
         return text
+
+    def _validate_issues(self, issues: List[Dict[str, str]]) -> bool:
+        """Basic validation for LLM-produced issues.
+
+        Rules:
+        - Must be a list (handled by caller)
+        - Empty list is acceptable (means 'no issues')
+        - Every item must be a dict with a non-empty 'type' and a non-empty 'msg' of reasonable length
+
+        This is intentionally conservative: if the LLM returns incomplete issue objects
+        we prefer the deterministic, simpler heuristics to reduce false positives/negatives.
+        """
+        if not isinstance(issues, list):
+            return False
+        # empty list is valid (no issues)
+        if len(issues) == 0:
+            return True
+
+        for item in issues:
+            if not isinstance(item, dict):
+                return False
+            t = item.get("type")
+            m = item.get("msg")
+            if not t or not isinstance(t, str) or not t.strip():
+                return False
+            if not m or not isinstance(m, str) or len(m.strip()) < 5:
+                # require a minimally informative message
+                return False
+
+        return True
 
     def _can_call_llm(self) -> bool:
         return self.client is not None and hasattr(self.client, "complete")

@@ -107,3 +107,9 @@ You should see tests covering:
 * Risk scoring and guardrails
 * Heuristic fallbacks when LLM output is invalid
 * End-to-end agent workflow shape
+
+---
+
+## Short Summary
+
+An automated fixer isn’t just AI, it combines simple rule based checks with AI suggestions. The key challenge is making it safe by validating and scoring outputs before applying any changes. Students often struggle with deciding where to add guardrails, like how to verify model outputs or when to rely on deterministic rules instead. While AI can quickly suggest fixes, it can also produce incorrect, incomplete, or give an output that doesn't work. That’s why strong validation is important, such as ensuring outputs are well formed and code changes actually run or pass checks. A practical way to learn this is by writing a failing unit test for a bad AI output and then adding the smallest guardrail to fix it. This helps students focus on making the system reliable instead of relying completely on AI.

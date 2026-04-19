@@ -46,3 +46,23 @@ def test_missing_return_is_penalized():
     )
     assert risk["score"] < 100
     assert any("Return" in r or "return" in r for r in risk["reasons"])
+
+
+def test_autofix_suppressed_reason_for_borderline_low_score():
+    """Borderline low-risk cases (score <85 but level=='low') should not autofix
+    and should include an explicit reason explaining the suppression.
+    """
+    original = "# TODO: cleanup later\n"
+    fixed = original
+    risk = assess_risk(
+        original_code=original,
+        fixed_code=fixed,
+        issues=[{"type": "Maintainability", "severity": "Medium", "msg": "TODO found"}],
+    )
+
+    # We expect a borderline low score (e.g., 80) which yields level 'low' but
+    # should not trigger autofix due to the 85 threshold.
+    assert risk["level"] == "low"
+    assert risk["should_autofix"] is False
+    # Check for explicit suppression reason
+    assert any("Autofix suppressed" in r for r in risk["reasons"]) , f"Reasons were: {risk['reasons']}"
